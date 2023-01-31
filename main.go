@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -8,19 +9,20 @@ import (
 )
 
 func main() {
-	sample := "/home/baude/kvp_sample"
-	f, err := os.Open(sample)
+
+	file_content, err := os.ReadFile(hyperv.KvpPool3)
+	rdr := bytes.NewReader(file_content)
+
+	kvpf, err := hyperv.NewKVPFile(rdr)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	kvpf, err := hyperv.NewKVPFile(f)
-	if err != nil {
-		fmt.Println(err)
-		return
+
+	keys := kvpf.Keys()
+
+	for _, k := range keys {
+		val, _ := kvpf.Get(k)
+		fmt.Println(k, val)
 	}
-	fmt.Println(kvpf.Keys())
-	val, exists := kvpf.Get("HostinSystemOsMinor")
-	fmt.Println(exists)
-	fmt.Println(val)
 }

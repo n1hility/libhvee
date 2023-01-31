@@ -1,9 +1,9 @@
 package hyperv
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"os"
 )
 
 const (
@@ -13,6 +13,10 @@ const (
 	// Microsoft defines the value in the binary file to be 2048 bytes.  Unused bytes will
 	// be padded as described in the key description.
 	valLen = 2048
+
+	// KvpPool3 is where the kvp daemon writes the data it is
+	// provided by hyperv for describing the guest vm.
+	KvpPool3 = "var/lib/hyperv/.kvp_pool_3"
 )
 
 // kvp represents a single key/value pairs
@@ -23,16 +27,17 @@ type kvp struct {
 	val []byte
 }
 
+// print is a debug only function rn
 func (k kvp) print() {
 	fmt.Printf("key: %s value: %s\n", k.key, k.val)
 }
 
 // newkvp creates a new instance of the key value pair in the
 // predecided lengths
-func newKvp() kvp {
+func newKvp(key []byte, val []byte) kvp {
 	return kvp{
-		key: make([]byte, 512),
-		val: make([]byte, 2048),
+		key: bytes.Trim(key, "\x00"),
+		val: bytes.Trim(val, "\x00"),
 	}
 }
 
@@ -40,7 +45,7 @@ func newKvp() kvp {
 // about the file and its records.
 type KvpFile struct {
 	// File being read
-	*os.File
+	*bytes.Reader
 	// once decoded, kvps are an array of key/value pairs
 	kvps []kvp
 	// read position, byte number
@@ -52,8 +57,8 @@ type KvpFile struct {
 // Keys returns all the keys in the key-value file
 func (f *KvpFile) Keys() []string {
 	keys := make([]string, len(f.kvps))
-	for _, s := range f.kvps {
-		keys = append(keys, fmt.Sprintf("%s", s.key))
+	for i, s := range f.kvps {
+		keys[i] = fmt.Sprintf("%s", s.key)
 	}
 	return keys
 }
@@ -63,11 +68,8 @@ func (f *KvpFile) Keys() []string {
 func (f *KvpFile) Get(key string) (string, bool) {
 	for _, s := range f.kvps {
 		iterKey := fmt.Sprintf("%s", s.key)
-		// we need to trim the kvp key string because it is always
-		// 512 bytes long; we trim to len of the key being searched for and
-		// then comparison is made
-		if key == iterKey[0:len(key)] {
-			return iterKey, true
+		if key == iterKey {
+			return fmt.Sprintf("%s", s.val), true
 		}
 	}
 	return "", false
@@ -76,22 +78,29 @@ func (f *KvpFile) Get(key string) (string, bool) {
 // parseNext is an internal function used by decode to read and record
 // the next record in the file
 func (f *KvpFile) parseNext() error {
-	newkvp := newKvp()
-	n1, err := f.ReadAt(newkvp.key, f.position)
+	tmpKey := make([]byte, keyLen)
+	n1, err := f.ReadAt(tmpKey, f.position)
 	if err != nil {
 		return err
 	}
 	if n1 != keyLen {
 		return errors.New("unable to read full key length")
 	}
+
+	// remove cruft/padding
 	f.position += keyLen
-	n2, err := f.ReadAt(newkvp.val, f.position)
+
+	tmpVal := make([]byte, valLen)
+
+	n2, err := f.ReadAt(tmpVal, f.position)
 	if err != nil {
 		return err
 	}
 	if n2 != valLen {
 		return errors.New("unable to read full value")
 	}
+
+	newkvp := newKvp(tmpKey, tmpVal)
 	f.kvps = append(f.kvps, newkvp)
 	f.position += valLen
 	return nil
@@ -113,18 +122,14 @@ func (f *KvpFile) decode() error {
 
 // NewKVPFile reads and processes a key-value-pair file exposed by hyperv to Linux
 // in a "binary" form.
-func NewKVPFile(f *os.File) (KvpFile, error) {
-	fileInfo, err := f.Stat()
-	if err != nil {
-		return KvpFile{}, err
-	}
+func NewKVPFile(f *bytes.Reader) (KvpFile, error) {
 	k := KvpFile{
-		File:     f,
-		kvps:     nil,
-		position: 0,
+		f,
+		nil,
+		0,
 		// chunk out the file for easy way to iterate
-		records: fileInfo.Size() / (keyLen + valLen),
+		f.Size() / (keyLen + valLen),
 	}
-	err = k.decode()
+	err := k.decode()
 	return k, err
 }
