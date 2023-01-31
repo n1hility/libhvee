@@ -16,7 +16,7 @@ const (
 
 	// KvpPool3 is where the kvp daemon writes the data it is
 	// provided by hyperv for describing the guest vm.
-	KvpPool3 = "var/lib/hyperv/.kvp_pool_3"
+	KvpPool3 = "/var/lib/hyperv/.kvp_pool_3"
 )
 
 // kvp represents a single key/value pairs
