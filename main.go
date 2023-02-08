@@ -9,7 +9,7 @@ import (
 
 func main() {
 	dice_name := "com.coreos.ignition.kvp."
-	fn := "./podman-machine-default.ign"
+	fn := "configs/podman-machine-default.ign"
 	file_content, err := os.ReadFile(fn)
 	rdr := bytes.NewReader(file_content)
 	rdrLen := rdr.Len()

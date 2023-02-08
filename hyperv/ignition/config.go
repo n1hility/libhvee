@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	kvpValueMaxLen = int(1000)
+	kvpValueMaxLen = int(990)
 )
 
 type segment []byte
