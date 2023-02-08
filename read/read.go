@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/baude/hyperv_kvp/hyperv/ignition"
+	"os"
 	"unsafe"
 )
 
@@ -31,7 +33,6 @@ func readData() map[string]string {
 		}
 		ptr = unsafe.Add(ptr, 4)
 
-
 		key := readString(ptr, keyLen)
 
 		ptr = unsafe.Add(ptr, keyLen)
@@ -48,7 +49,28 @@ func readData() map[string]string {
 }
 
 func main() {
-	for k, v := range readData() {
-		fmt.Printf("%s: %s\n", k, v)
+	m := readData()
+	var (
+		parts   ignition.Segments
+		counter int
+	)
+	//for k, v := range readData() {
+	//	fmt.Printf("%s: %s\n", k, v)
+	//}
+
+	for {
+		key := fmt.Sprintf("com_coreos_ignition_kvp_%d", counter)
+		p, exists := m[key]
+		if !exists {
+			break
+		}
+		parts = append(parts, []byte(p))
+		counter++
 	}
+	if len(parts) < 1 {
+		fmt.Println("no keys for ignition were found")
+		os.Exit(1)
+	}
+	b := ignition.Glue(parts)
+	fmt.Println(string(b))
 }
