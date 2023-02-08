@@ -1,8 +1,9 @@
 package main
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
+	"github.com/baude/hyperv_kvp/hyperv/ignition"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -105,10 +106,10 @@ next:
 		case KVP_OP_REGISTER1:
 			continue next
 		case KVP_OP_SET:
-			key := []byte(hv_msg.kvp_set.data.key[:hv_msg.kvp_set.data.key_size])
-			value := []byte(hv_msg.kvp_set.data.value[:hv_msg.kvp_set.data.value_size])
-			bytes.Trim(key, "\x00")
-			bytes.Trim(value, "\x00")
+			// on the next two variables, we are cutting the last byte because otherwise
+			// it is padded and key lookups fail
+			key := []byte(hv_msg.kvp_set.data.key[:hv_msg.kvp_set.data.key_size-1])
+			value := []byte(hv_msg.kvp_set.data.value[:hv_msg.kvp_set.data.value_size-1])
 			ret[string(key)] = string(value)
 		}
 
@@ -129,8 +130,23 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for k, _ := range ret {
+	var (
+		counter int
+		parts   ignition.Segments
+		ign_key = "com_coreos_ignition_kvp_"
+	)
+	for {
 		//fmt.Printf("Read %s -> %s\n", k, v)
-		fmt.Println(k, len(k), []byte(k))
+		lookForKey := fmt.Sprintf("%s%d", ign_key, counter)
+		val, exists := ret[lookForKey]
+		if !exists {
+			break
+		}
+		parts = append(parts, []byte(val))
 	}
+	if len(parts) < 1 {
+		panic(errors.New("unable to find ignition configs in kvp"))
+	}
+	cfg := ignition.Glue(parts)
+	fmt.Println(cfg)
 }
