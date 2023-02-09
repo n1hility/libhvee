@@ -1,4 +1,4 @@
-package hyperv
+package old
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-//go:embed test/default.data
+//go:embed ../hyperv/test/default.data
 var data embed.FS
 
 var default_data_keys = []string{"HostName", "HostingSystemEditionId", "HostingSystemNestedLevel", "HostingSystemOsMajor", "HostingSystemOsMinor", "HostingSystemProcessorArchitecture", "HostingSystemProcessorIdleStateMax", "HostingSystemProcessorThrottleMax", "HostingSystemProcessorThrottleMin", "HostingSystemSpMajor", "HostingSystemSpMinor", "PhysicalHostName", "PhysicalHostNameFullyQualified", "VirtualMachineDynamicMemoryBalancingEnabled", "VirtualMachineId", "VirtualMachineName"}
