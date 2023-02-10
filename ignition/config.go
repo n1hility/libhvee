@@ -41,10 +41,10 @@ const (
 )
 
 var (
-	// ignKey represents the prefix key name for finding ignition file parts
+	// Key represents the prefix key name for finding ignition file parts
 	// in the key value pairs.  it normally will have an integer added to the
 	// end when looking up keys sequentially
-	ignKey = "com_coreos_ignition_kvp_"
+	Key = "com_coreos_ignition_kvp_"
 )
 
 type hvKvpExchgMsgValue struct {

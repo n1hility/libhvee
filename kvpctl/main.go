@@ -4,14 +4,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/baude/hyperv_kvp/ignition"
+	"github.com/baude/hypervctl/pkg/hypervctl"
 	"os"
-	"github.com/n1hility/hypervctl/pkg/hypervctl"
 )
 
 func main() {
-	var err error
-
 	vmms := hypervctl.VirtualMachineManager{}
 
 	if len(os.Args) < 3 {
@@ -42,6 +42,8 @@ func main() {
 	case "put":
 		verifyArgs("put", false)
 		err = vm.PutKeyValuePair(os.Args[3], os.Args[4])
+	case "add-ign":
+		err = addIgnFile(vm, os.Args[3])
 	default:
 		fmt.Printf("Operation must be add, rm, edit, or put\n")
 		os.Exit(1)
@@ -51,6 +53,25 @@ func main() {
 		fmt.Printf("KVP failed: %s\n", err.Error())
 		os.Exit(1)
 	}
+}
+
+func addIgnFile(vm *hypervctl.VirtualMachine, name string) error {
+	b, err := os.ReadFile(name)
+	if err != nil {
+		return err
+	}
+	parts, err := ignition.Dice(bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	for i, v := range parts {
+		key := fmt.Sprintf("%s%d", ignition.Key, i)
+		if err := vm.AddKeyValuePair(key, string(v)); err != nil {
+			return err
+		}
+		fmt.Println("added key: ", key)
+	}
+	return nil
 }
 
 func verifyArgs(operation string, value bool) {

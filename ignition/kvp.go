@@ -104,7 +104,7 @@ func getIgnitionFromKVP() ([]byte, error) {
 		parts   Segments
 	)
 	for {
-		lookForKey := fmt.Sprintf("%s%d", ignKey, counter)
+		lookForKey := fmt.Sprintf("%s%d", Key, counter)
 		val, exists := ret[lookForKey]
 		if !exists {
 			break

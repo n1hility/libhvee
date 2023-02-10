@@ -3,9 +3,11 @@ module github.com/baude/hyperv_kvp
 go 1.19
 
 require (
-	github.com/n1hility/hypervctl v0.0.0-20230210051943-5edce6fcf540
+	github.com/n1hility/hypervctl v0.0.0-20230210055924-91c3470fe725
 	golang.org/x/sys v0.5.0
 )
+
+replace github.com/baude/hyperv_kvp => ../../baude/hypervctl
 
 require (
 	github.com/drtimf/wmi v1.0.0 // indirect
