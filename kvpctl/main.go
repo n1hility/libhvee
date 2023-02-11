@@ -5,21 +5,28 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/baude/hyperv_kvp/ignition"
-	"github.com/baude/hypervctl/pkg/hypervctl"
 	"os"
+	"unicode"
+
+	"github.com/n1hility/hypervctl/pkg/hypervctl"
+	"golang.org/x/sys/windows"
 )
 
 func main() {
 	vmms := hypervctl.VirtualMachineManager{}
 
 	if len(os.Args) < 3 {
-		fmt.Printf("Usage: %s <vm name> (add|rm|edit|put) <key> [<value>]\n\n", os.Args[0])
-		fmt.Printf("\tadd  = create a key if it doesn't exist\n")
-		fmt.Printf("\tedit = change a key that exists\n")
-		fmt.Printf("\tput  = create or edit a key\n")
-		fmt.Printf("\trm   = delete key\n\n")
+		fmt.Printf("Usage: %s <vm name> (get|add|rm|edit|put|clear) [<key>] [<value>]\n\n", os.Args[0])
+		fmt.Printf("\tget   = get all keys or a specific key\n")
+		fmt.Printf("\tadd   = create a key if it doesn't exist\n")
+		fmt.Printf("\tedit  = change a key that exists\n")
+		fmt.Printf("\tput   = create or edit a key\n")
+		fmt.Printf("\trm    = delete key\n")
+		fmt.Printf("\tclear = delete everything\n\n")
+
 		return
 	}
 
@@ -44,8 +51,13 @@ func main() {
 		err = vm.PutKeyValuePair(os.Args[3], os.Args[4])
 	case "add-ign":
 		err = addIgnFile(vm, os.Args[3])
+	case "get":
+		err = getOperation(vm)
+	case "clear":
+		err = clearOperation(vm)
+
 	default:
-		fmt.Printf("Operation must be add, rm, edit, or put\n")
+		fmt.Printf("Operation must be get, add, rm, edit, clear, or put\n")
 		os.Exit(1)
 	}
 
@@ -71,6 +83,79 @@ func addIgnFile(vm *hypervctl.VirtualMachine, name string) error {
 		}
 		fmt.Println("added key: ", key)
 	}
+	return nil
+}
+
+func getOperation(vm *hypervctl.VirtualMachine) error {
+	kvp, err := vm.GetKeyValuePairs()
+	if err != nil {
+		return err
+	}
+	if len(os.Args) > 3 {
+		key := os.Args[3]
+		fmt.Printf("%s = %s\n", key, kvp[key])
+		return nil
+	}
+
+	for key, value := range kvp {
+		fmt.Printf("%s = %v\n", key, value)
+	}
+	return nil
+}
+
+func clearOperation(vm *hypervctl.VirtualMachine) error {
+	const lineInputModeFlag uint32 = 0x2
+	fmt.Printf("This will delete ALL keys. Are you sure? [y/n] ")
+	handle := windows.Handle(os.Stdin.Fd())
+
+	var mode uint32
+	err := windows.GetConsoleMode(handle, &mode)
+	if (err == nil) {
+		// disable line input for single char reads
+		_ = windows.SetConsoleMode(handle, mode & ^lineInputModeFlag)
+		defer windows.SetConsoleMode(handle, mode)
+	}
+
+	loop:
+	for {
+		b := make([]byte, 1)
+		n, err := os.Stdin.Read(b)
+		if err != nil {
+			return err
+		}
+		if n < 1 {
+			continue
+		}
+		switch unicode.ToLower(rune(b[0])) {
+		case 'y':
+			fmt.Printf("y\n")
+			break loop
+		case 'n':
+			fmt.Printf("n\n")
+			return errors.New("Aborted by request")
+		}
+	}
+
+	pairs, err := vm.GetKeyValuePairs()
+	if err != nil {
+		return err
+	}
+
+	count := 0
+	for key, _ := range pairs {
+		err := vm.RemoveKeyValuePair(key)
+		if err != nil {
+			fmt.Printf("WARN: could not remove key %q\n", key)
+		} else {
+			fmt.Print(".")
+			count++
+			if count % 40 == 0 {
+				fmt.Println()
+			}
+		}
+	}
+
+	fmt.Printf("\n%d keys deleted!\n", count)
 	return nil
 }
 
