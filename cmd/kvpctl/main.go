@@ -9,7 +9,7 @@ import (
 	"os"
 	"unicode"
 
-	"github.com/n1hility/hypervctl/pkg/hypervctl"
+	"github.com/containers/libhivee/pkg/hypervctl"
 	"golang.org/x/sys/windows"
 )
 

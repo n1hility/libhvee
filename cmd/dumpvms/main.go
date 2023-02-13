@@ -7,7 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"github.com/n1hility/hypervctl/pkg/hypervctl"
+
+	"github.com/containers/libhivee/pkg/hypervctl"
 )
 
 func main() {

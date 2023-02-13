@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/n1hility/hypervctl/pkg/wmiext"
-
+	"github.com/containers/libhivee/pkg/wmiext"
 	"github.com/drtimf/wmi"
 )
 

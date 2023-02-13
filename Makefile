@@ -1,17 +1,21 @@
+export GOOS=windows
+export GOARCH=amd64
 SRC = $(shell find . -type f -name '*.go')
 
 .PHONY: default
 default: build
 
 .PHONY: build 
-build: kvpctl.exe hyperv_kvp
+build: bin bin/kvpctl.exe bin/dumpvms.exe
 
-kvpctl.exe: export GOOS=windows
-kvpctl.exe: export GOARCH=amd64
-kvpctl.exe: $(SRC) go.mod go.sum
-	go build ./kvpctl
+bin:
+	mkdir -p bin
 
-hyperv_kvp:
-	go build
+bin/kvpctl.exe: $(SRC) go.mod go.sum
+	go build -o bin ./cmd/kvpctl
+
+bin/dumpvms.exe: $(SRC) go.mod go.sum
+	go build -o bin ./cmd/dumpvms
+
 clean:
-	rm *.exe hyperv_kvp
+	rm -rf bin
